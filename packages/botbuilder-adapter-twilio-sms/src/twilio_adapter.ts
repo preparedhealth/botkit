@@ -320,58 +320,33 @@ export class TwilioAdapter extends BotAdapter {
         console.log({ 
             Message: req.body}, 'incoming message content');
 
-/**
- * SNS RESPONSE 
-headers {
-  'x-amz-sns-message-type': 'Notification',
-  'x-amz-sns-message-id': '214b0132-74d2-54bb-8b87-57ca73fdc1be',
-  'x-amz-sns-topic-arn': 'arn:aws:sns:us-east-1:305244661193:survey-sns-topic',
-  'x-amz-sns-subscription-arn': 'arn:aws:sns:us-east-1:305244661193:survey-sns-topic:d42ec141-ef0b-499a-9c12-51e1161f42c8',
-  'content-length': '1207',
-  'content-type': 'application/json; charset=UTF-8',
-  host: '5ab003ac.ngrok.io',
-  'user-agent': 'Amazon Simple Notification Service Agent',
-  'accept-encoding': 'gzip,deflate',
-  'x-forwarded-for': '72.21.217.73'
-},
-body {
-  Type: 'Notification',
-  MessageId: '214b0132-74d2-54bb-8b87-57ca73fdc1be',
-  TopicArn: 'arn:aws:sns:us-east-1:305244661193:survey-sns-topic',
-  Message: '{"originationNumber":"+17732205399","destinationNumber":"+12058465294","messageKeyword":"keyword_305244661193","messageBody":"Yo yo yo","inboundMessageId":"1d1c7503-8f65-5be4-a148-23fb884a087a","previousPublishedMessageId":"4ekeknv7qtva0qg54p71m6ckt8gb806lt2mjfbg0"}',
-  Timestamp: '2020-03-27T13:51:43.628Z',
-  SignatureVersion: '1',
-  Signature: 'V3H1BZSrPHUjCnUpJ02EZ+ZnxdyqxmwB3avY4Qj/olZAM8GEWbanNnMh6kdU0Jm05nd5l6RJIsurvo3+UGAXNgL7DtwPIPrYK2h/FKQJ2mjPCYO93A87TKdrDldY6/PgJl8bBvkZ0sgJG388QW4XsnHxiTlT2YiW+RMXxF49Mss5TVB8Afc2JsA8dwrBN+MXr0mpIO1idZ2D0jImSpEsGwdcm6PdgXgztIeqsTphaMzMd+MF/web0jjbSjgKSGOEPHR69r5LXNlqx1bFyRyOZvzCZguNlKAGfSLZIB8jWGrqqOOzppEcxq3FpCFvYCL50j/FCMGyyAMaPPVGRV+SXg==',
-  SigningCertURL: 'https://sns.us-east-1.amazonaws.com/SimpleNotificationService-a86cb10b4e1f29c941702d737128f7b6.pem',
-  UnsubscribeURL: 'https://sns.us-east-1.amazonaws.com/?Action=Unsubscribe&SubscriptionArn=arn:aws:sns:us-east-1:305244661193:survey-sns-topic:d42ec141-ef0b-499a-9c12-51e1161f42c8'
-}
- */
+            /**
+             * SNS RESPONSE 
+            headers {
+            'x-amz-sns-message-type': 'Notification',
+            'x-amz-sns-message-id': '214b0132-74d2-54bb-8b87-57ca73fdc1be',
+            'x-amz-sns-topic-arn': 'arn:aws:sns:us-east-1:305244661193:survey-sns-topic',
+            'x-amz-sns-subscription-arn': 'arn:aws:sns:us-east-1:305244661193:survey-sns-topic:d42ec141-ef0b-499a-9c12-51e1161f42c8',
+            'content-length': '1207',
+            'content-type': 'application/json; charset=UTF-8',
+            host: '5ab003ac.ngrok.io',
+            'user-agent': 'Amazon Simple Notification Service Agent',
+            'accept-encoding': 'gzip,deflate',
+            'x-forwarded-for': '72.21.217.73'
+            },
+            body {
+            Type: 'Notification',
+            MessageId: '214b0132-74d2-54bb-8b87-57ca73fdc1be',
+            TopicArn: 'arn:aws:sns:us-east-1:305244661193:survey-sns-topic',
+            Message: '{"originationNumber":"+17732205399","destinationNumber":"+12058465294","messageKeyword":"keyword_305244661193","messageBody":"Yo yo yo","inboundMessageId":"1d1c7503-8f65-5be4-a148-23fb884a087a","previousPublishedMessageId":"4ekeknv7qtva0qg54p71m6ckt8gb806lt2mjfbg0"}',
+            Timestamp: '2020-03-27T13:51:43.628Z',
+            SignatureVersion: '1',
+            Signature: 'V3H1BZSrPHUjCnUpJ02EZ+ZnxdyqxmwB3avY4Qj/olZAM8GEWbanNnMh6kdU0Jm05nd5l6RJIsurvo3+UGAXNgL7DtwPIPrYK2h/FKQJ2mjPCYO93A87TKdrDldY6/PgJl8bBvkZ0sgJG388QW4XsnHxiTlT2YiW+RMXxF49Mss5TVB8Afc2JsA8dwrBN+MXr0mpIO1idZ2D0jImSpEsGwdcm6PdgXgztIeqsTphaMzMd+MF/web0jjbSjgKSGOEPHR69r5LXNlqx1bFyRyOZvzCZguNlKAGfSLZIB8jWGrqqOOzppEcxq3FpCFvYCL50j/FCMGyyAMaPPVGRV+SXg==',
+            SigningCertURL: 'https://sns.us-east-1.amazonaws.com/SimpleNotificationService-a86cb10b4e1f29c941702d737128f7b6.pem',
+            UnsubscribeURL: 'https://sns.us-east-1.amazonaws.com/?Action=Unsubscribe&SubscriptionArn=arn:aws:sns:us-east-1:305244661193:survey-sns-topic:d42ec141-ef0b-499a-9c12-51e1161f42c8'
+            }
+            */
 
- /**
- {
-      "ToCountry": "US",
-		"ToState": "NJ",
-		"SmsMessageSid": "SM638b990faf37620adf7b5fb92b48ba87",
-		"NumMedia": "0",
-		"ToCity": "HIGHTSTOWN",
-		"FromZip": "60641",
-		"SmsSid": "SM638b990faf37620adf7b5fb92b48ba87",
-		"FromState": "IL",
-		"SmsStatus": "received",
-		"FromCity": "CHICAGO",
-		"Body": "Yes",
-		"FromCountry": "US",
-		"To": "+16094693538",
-		"ToZip": "08520",
-		"NumSegments": "1",
-		"MessageSid": "SM638b990faf37620adf7b5fb92b48ba87",
-		"AccountSid": "AC2cc59d1f34fb4e37a4e71c835e8df28c",
-		"From": "+17732205399",
-		"ApiVersion": "2010-04-01"
- }
-*/
-
-  
 
 
 

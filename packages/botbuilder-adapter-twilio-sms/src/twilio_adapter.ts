@@ -11,6 +11,7 @@ import * as Debug from 'debug';
 import * as Twilio from 'twilio';
 import { TwilioBotWorker } from './botworker';
 const debug = Debug('botkit:twilio');
+import * as AWS from 'aws-sdk';
 
 /**
  * Connect [Botkit](https://www.npmjs.com/package/botkit) or [BotBuilder](https://www.npmjs.com/package/botbuilder) to Twilio's SMS service.
@@ -20,7 +21,7 @@ export class TwilioAdapter extends BotAdapter {
      * Name used by Botkit plugin loader
      * @ignore
      */
-    public name = 'Twilio SMS Adapter';
+    public name: string = 'Twilio SMS Adapter';
 
     /**
      * Object containing one or more Botkit middlewares to bind automatically.
@@ -33,7 +34,7 @@ export class TwilioAdapter extends BotAdapter {
      * @ignore
      */
     public botkit_worker = TwilioBotWorker;
-
+    private pinpoint = new AWS.Pinpoint();
     private options: TwilioAdapterOptions;
     private api: Twilio.Twilio; // Twilio api
 
@@ -80,7 +81,7 @@ export class TwilioAdapter extends BotAdapter {
         this.options = options;
 
         if (!options.twilio_number) {
-            const err = 'twilio_number is a required part of the configuration.';
+            let err = 'twilio_number is a required part of the configuration.';
             if (!this.options.enable_incomplete) {
                 throw new Error(err);
             } else {
@@ -88,7 +89,7 @@ export class TwilioAdapter extends BotAdapter {
             }
         }
         if (!options.account_sid) {
-            const err = 'account_sid  is a required part of the configuration.';
+            let err = 'account_sid  is a required part of the configuration.';
             if (!this.options.enable_incomplete) {
                 throw new Error(err);
             } else {
@@ -96,7 +97,7 @@ export class TwilioAdapter extends BotAdapter {
             }
         }
         if (!options.auth_token) {
-            const err = 'auth_token is a required part of the configuration.';
+            let err = 'auth_token is a required part of the configuration.';
             if (!this.options.enable_incomplete) {
                 throw new Error(err);
             } else {
@@ -106,15 +107,16 @@ export class TwilioAdapter extends BotAdapter {
 
         if (this.options.enable_incomplete) {
             const warning = [
-                '',
-                '****************************************************************************************',
-                '* WARNING: Your adapter may be running with an incomplete/unsafe configuration.        *',
-                '* - Ensure all required configuration options are present                              *',
-                '* - Disable the "enable_incomplete" option!                                            *',
-                '****************************************************************************************',
-                ''
+                ``,
+                `****************************************************************************************`,
+                `* WARNING: Your adapter may be running with an incomplete/unsafe configuration.        *`,
+                `* - Ensure all required configuration options are present                              *`,
+                `* - Disable the "enable_incomplete" option!                                            *`,
+                `****************************************************************************************`,
+                ``
             ];
             console.warn(warning.join('\n'));
+            
         }
 
         try {
@@ -128,6 +130,40 @@ export class TwilioAdapter extends BotAdapter {
                 }
             }
         }
+
+        if (!options.pinpoint_number) {
+            let err = 'pinpoint_number is a required part of the configuration.';
+            if (!this.options.pinpoint_number) {
+              throw new Error(err);
+            } else {
+              console.error(err);
+            }
+          }
+          if (!options.aws_region) {
+            let err = 'aws_region  is a required part of the configuration.';
+            if (!this.options.aws_region) {
+              throw new Error(err);
+            } else {
+              console.error(err);
+            }
+          }
+          if (!options.pinpoint_appid) {
+            let err = 'pinpoint_appid is a required part of the configuration.';
+            if (!this.options.pinpoint_appid) {
+              throw new Error(err);
+            } else {
+              console.error(err);
+            }
+          }
+      
+          try {
+            AWS.config.update({
+              region: process.env.Region
+            });
+          } catch (err) {
+            console.error(err);
+          }
+      
 
         this.middlewares = {
             spawn: [
@@ -167,12 +203,15 @@ export class TwilioAdapter extends BotAdapter {
      */
     public async sendActivities(context: TurnContext, activities: Partial<Activity>[]): Promise<ResourceResponse[]> {
         const responses = [];
-        for (let a = 0; a < activities.length; a++) {
+        for (var a = 0; a < activities.length; a++) {
             const activity = activities[a];
             if (activity.type === ActivityTypes.Message) {
-                const message = this.activityToTwilio(activity as Activity);
-
-                const res = await this.api.messages.create(message);
+                let msg = activity.text;
+                const custPhone = activity.conversation.id;
+                const messageId = await this.sendPinpointSms(custPhone, msg);
+                // responses.push({ id: messageId });
+                // const message = this.activityToTwilio(activity as Activity);
+                // const res = await this.api.messages.create(message);
                 responses.push({ id: res.sid });
             } else {
                 debug('Unknown message type encountered in sendActivities: ', activity.type);
@@ -181,6 +220,56 @@ export class TwilioAdapter extends BotAdapter {
 
         return responses;
     }
+
+    
+
+    private async sendPinpointSms(custPhone, message) {
+        console.log('sendPinpointSms:start');
+        var paramsSMS = {
+          ApplicationId: this.options.pinpoint_appid,
+          MessageRequest: {
+            Addresses: {
+              [custPhone]: {
+                ChannelType: 'SMS'
+              }
+            },
+            MessageConfiguration: {
+              SMSMessage: {
+                Body: message,
+                MessageType: 'TRANSACTIONAL',
+                OriginationNumber: this.options.pinpoint_number
+              }
+            }
+          }
+        };
+        return new Promise((resolve, reject) => {
+            const pinpoint_number = this.options.pinpoint_number;
+          this.pinpoint.sendMessages(paramsSMS, function(err, data) {
+            if (err) {
+              console.log('An error occurred.\n');
+              console.log(err, err.stack);
+              reject({ err, data });
+            } else if (
+              data['MessageResponse']['Result'][custPhone]['DeliveryStatus'] !=
+              'SUCCESSFUL'
+            ) {
+              console.log('Failed to send SMS response:');
+              console.log(data['MessageResponse']['Result']);
+              reject({ data });
+            } else {
+              console.log(
+                'Successfully sent response via SMS from ' +
+                  pinpoint_number +
+                  ' to ' +
+                  custPhone
+              );
+              const messageId =
+                data['MessageResponse']['Result'][custPhone]['MessageId'];
+              resolve(messageId);
+            }
+          });
+        });
+      }
 
     /**
      * Twilio SMS adapter does not support updateActivity.
@@ -223,49 +312,115 @@ export class TwilioAdapter extends BotAdapter {
      * @param res A response object from Restify or Express
      * @param logic A bot logic function in the form `async(context) => { ... }`
      */
+    //@ts-ignore
     public async processActivity(req, res, logic: (context: TurnContext) => Promise<void>): Promise<void> {
-        if (await this.verifySignature(req, res) === true) {
-            const event = req.body;
 
-            const activity = {
-                id: event.MessageSid,
-                timestamp: new Date(),
-                channelId: 'twilio-sms',
-                conversation: {
-                    id: event.From
-                },
-                from: {
-                    id: event.From
-                },
-                recipient: {
-                    id: event.To
-                },
-                text: event.Body,
-                channelData: event,
-                type: ActivityTypes.Message
-            };
+        console.log({ 
+            headers: req.headers, body : req.body}, 'incoming sns webhook:');
+        console.log({ 
+            Message: req.body}, 'incoming message content');
 
-            // Detect attachments
-            if (event.NumMedia && parseInt(event.NumMedia) > 0) {
-                // specify a different event type for Botkit
-                activity.channelData.botkitEventType = 'picture_message';
+/**
+ * SNS RESPONSE 
+headers {
+  'x-amz-sns-message-type': 'Notification',
+  'x-amz-sns-message-id': '214b0132-74d2-54bb-8b87-57ca73fdc1be',
+  'x-amz-sns-topic-arn': 'arn:aws:sns:us-east-1:305244661193:survey-sns-topic',
+  'x-amz-sns-subscription-arn': 'arn:aws:sns:us-east-1:305244661193:survey-sns-topic:d42ec141-ef0b-499a-9c12-51e1161f42c8',
+  'content-length': '1207',
+  'content-type': 'application/json; charset=UTF-8',
+  host: '5ab003ac.ngrok.io',
+  'user-agent': 'Amazon Simple Notification Service Agent',
+  'accept-encoding': 'gzip,deflate',
+  'x-forwarded-for': '72.21.217.73'
+},
+body {
+  Type: 'Notification',
+  MessageId: '214b0132-74d2-54bb-8b87-57ca73fdc1be',
+  TopicArn: 'arn:aws:sns:us-east-1:305244661193:survey-sns-topic',
+  Message: '{"originationNumber":"+17732205399","destinationNumber":"+12058465294","messageKeyword":"keyword_305244661193","messageBody":"Yo yo yo","inboundMessageId":"1d1c7503-8f65-5be4-a148-23fb884a087a","previousPublishedMessageId":"4ekeknv7qtva0qg54p71m6ckt8gb806lt2mjfbg0"}',
+  Timestamp: '2020-03-27T13:51:43.628Z',
+  SignatureVersion: '1',
+  Signature: 'V3H1BZSrPHUjCnUpJ02EZ+ZnxdyqxmwB3avY4Qj/olZAM8GEWbanNnMh6kdU0Jm05nd5l6RJIsurvo3+UGAXNgL7DtwPIPrYK2h/FKQJ2mjPCYO93A87TKdrDldY6/PgJl8bBvkZ0sgJG388QW4XsnHxiTlT2YiW+RMXxF49Mss5TVB8Afc2JsA8dwrBN+MXr0mpIO1idZ2D0jImSpEsGwdcm6PdgXgztIeqsTphaMzMd+MF/web0jjbSjgKSGOEPHR69r5LXNlqx1bFyRyOZvzCZguNlKAGfSLZIB8jWGrqqOOzppEcxq3FpCFvYCL50j/FCMGyyAMaPPVGRV+SXg==',
+  SigningCertURL: 'https://sns.us-east-1.amazonaws.com/SimpleNotificationService-a86cb10b4e1f29c941702d737128f7b6.pem',
+  UnsubscribeURL: 'https://sns.us-east-1.amazonaws.com/?Action=Unsubscribe&SubscriptionArn=arn:aws:sns:us-east-1:305244661193:survey-sns-topic:d42ec141-ef0b-499a-9c12-51e1161f42c8'
+}
+ */
+
+ /**
+ {
+      "ToCountry": "US",
+		"ToState": "NJ",
+		"SmsMessageSid": "SM638b990faf37620adf7b5fb92b48ba87",
+		"NumMedia": "0",
+		"ToCity": "HIGHTSTOWN",
+		"FromZip": "60641",
+		"SmsSid": "SM638b990faf37620adf7b5fb92b48ba87",
+		"FromState": "IL",
+		"SmsStatus": "received",
+		"FromCity": "CHICAGO",
+		"Body": "Yes",
+		"FromCountry": "US",
+		"To": "+16094693538",
+		"ToZip": "08520",
+		"NumSegments": "1",
+		"MessageSid": "SM638b990faf37620adf7b5fb92b48ba87",
+		"AccountSid": "AC2cc59d1f34fb4e37a4e71c835e8df28c",
+		"From": "+17732205399",
+		"ApiVersion": "2010-04-01"
+ }
+*/
+
+  
+
+
+
+
+       // if (await this.verifySignature(req, res) === true) {
+            const message : SNSMessage = (req.body? JSON.parse(req.body.Message): null) ;
+            if ( message ){ 
+                const activity = {
+                    id: message.messageBody,
+                    timestamp: new Date(),
+                    channelId: 'twilio-sms',
+                    conversation: {
+                        id: message.originationNumber
+                    },
+                    from: {
+                        id: message.originationNumber
+                    },
+                    recipient: {
+                        id: message.destinationNumber
+                    },
+                    text: message.messageBody,
+                    channelData: message,
+                    type: ActivityTypes.Message
+                };
+    
+                // // Detect attachments
+                // if (message.NumMedia && parseInt(message.NumMedia) > 0) {
+                //     // specify a different event type for Botkit
+                //     activity.channelData.botkitEventType = 'picture_message';
+                // }
+    
+                // create a conversation reference
+                const context = new TurnContext(this, activity as Activity);
+    
+                context.turnState.set('httpStatus', 200);
+    
+                await this.runMiddleware(context, logic);
+    
+                // send http response back
+                console.log('SENDING RESPONSE STATUS',context.turnState.get('httpStatus'));
+                res.status(context.turnState.get('httpStatus'));
+                if (context.turnState.get('httpBody')) {
+                    console.log('SENDING RESPONSE BODY ' , context.turnState.get('httpBody'));
+                    res.send(context.turnState.get('httpBody'));
+                } else {
+                    res.end();
+                }
             }
-
-            // create a conversation reference
-            const context = new TurnContext(this, activity as Activity);
-
-            context.turnState.set('httpStatus', 200);
-
-            await this.runMiddleware(context, logic);
-
-            // send http response back
-            res.status(context.turnState.get('httpStatus'));
-            if (context.turnState.get('httpBody')) {
-                res.send(context.turnState.get('httpBody'));
-            } else {
-                res.end();
-            }
-        }
+        // }
     }
 
     /**
@@ -302,7 +457,14 @@ export class TwilioAdapter extends BotAdapter {
         }
     }
 }
-
+export interface SNSMessage { 
+    originationNumber : string; //from Survey Participant
+    destinationNumber : string; //to Pinpoint
+    messageKeyword : string; 
+    messageBody: string // text content
+    inboundMessageId: string;
+    previousPublishedMessageId : string;  
+}
 /**
  * Parameters passed to the TwilioAdapter constructor.
  */
@@ -329,5 +491,18 @@ export interface TwilioAdapterOptions {
      * This should only be used when getting started.
      */
     enable_incomplete?: boolean;
+
+    /**
+   * The phone number associated with this Pinpoint app, in the format 1XXXYYYZZZZ
+   */
+  pinpoint_number: string;
+  /**
+   * The aws region
+   */
+  aws_region: string;
+  /**
+   * The pintpoint app id
+   */
+  pinpoint_appid: string;
 
 }

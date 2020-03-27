@@ -10,6 +10,7 @@ import { BotWorker } from 'botkit';
 import * as Twilio from 'twilio';
 import { ConversationAccount, ChannelAccount } from 'botbuilder';
 
+
 /**
  * This is a specialized version of [Botkit's core BotWorker class](core.md#BotWorker) that includes additional methods for interacting with Twilio SMS.
  * It includes all functionality from the base class, as well as the extension methods below.

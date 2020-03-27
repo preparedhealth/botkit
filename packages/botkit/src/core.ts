@@ -369,15 +369,15 @@ export class Botkit {
                     });
                     next();
                 });
-
-                this.webserver.use(bodyParser.json());
-                this.webserver.use(bodyParser.urlencoded({ extended: true }));
-
+                // Execute custom middlewares first for overrides
                 if (this._config.webserver_middlewares && this._config.webserver_middlewares.length) {
                     this._config.webserver_middlewares.forEach((middleware) => {
                         this.webserver.use(middleware);
                     });
                 }
+
+                this.webserver.use(bodyParser.json());
+                this.webserver.use(bodyParser.urlencoded({ extended: true }));
 
                 this.http = http.createServer(this.webserver);
 

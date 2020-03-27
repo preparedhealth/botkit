@@ -468,16 +468,16 @@ export interface TwilioAdapterOptions {
     enable_incomplete?: boolean;
 
     /**
-   * The phone number associated with this Pinpoint app, in the format 1XXXYYYZZZZ
-   */
-  pinpoint_number: string;
-  /**
-   * The aws region
-   */
-  aws_region: string;
-  /**
-   * The pintpoint app id
-   */
-  pinpoint_appid: string;
+     * The phone number associated with this Pinpoint app, in the format 1XXXYYYZZZZ
+     */
+    pinpoint_number: string;
+    /**
+     * The aws region
+     */
+    aws_region: string;
+    /**
+     * The pintpoint app id
+     */
+    pinpoint_appid: string;
 
 }
